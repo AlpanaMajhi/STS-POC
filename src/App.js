@@ -2,8 +2,7 @@ import './App.css';
 import AudioReactRecorder, { RecordState } from "audio-react-recorder";
 import { useCallback, useState, useMemo } from 'react';
 import { StreamingClient, SocketStatus } from "@project-sunbird/open-speech-streaming-client";
-import { protocol } from 'socket.io-client';
-// import { io } from 'socket.io-client';
+
 
 function App() {
   const [recordAudio, setState] = useState(RecordState.STOP);
@@ -27,7 +26,7 @@ function App() {
                   UUID: data.data,
                 })
               );
-            };
+            }
           }
         };
         receiverSocket.onmessage = (message) => {
@@ -42,7 +41,10 @@ function App() {
                 const updatedObject = prev[index];
                 const parsedData = JSON.parse(data);
                 updatedObject['target'] = parsedData.pipelineResponse[0].output[0].target;
-                updatedObject['audio'] = `data:audio/wav;base64,${parsedData.pipelineResponse[1].audio[0].audioContent}`;
+                updatedObject["audio"] = {
+                  language: parsedData["targetLanguage"],
+                  audio: `data:audio/wav;base64,${parsedData.pipelineResponse[1].audio[0].audioContent}`,
+                };
                 return [...new Set(prev, updatedObject)];
               }
             })
@@ -72,7 +74,6 @@ function App() {
                 });
                 sentence = transcript.split(" ").slice(totalLength).join(" ")
                 streamTTS(senderSocket, receiverSocket, sentence, LANGUAGE_CODE, "en", prev.length);
-
                 return [
                   ...prev,
                   {source: transcript.split(" ").slice(totalLength) ,target: "", audio: "" }
@@ -100,12 +101,16 @@ function App() {
     return !!audioData.length ? audioData.map((audio, index)=>{
         const source = audio?.source.join(" ");
         const target = audio?.target;
-        const base64Audio = audio?.audio;
+        const base64Audio = audio?.audio?.audio;
+        const { language } = audio?.audio;
       return (
         <div>
           <p>{`sourcedata: ${source}`}</p>
           <p>{`targetData: ${target}`}</p>
-          <audio src={base64Audio} controls="controls" />
+          <p>
+            <span>{ language }</span>
+            <audio src={base64Audio} controls="controls" />
+          </p>
         </div>
       );
       // }
